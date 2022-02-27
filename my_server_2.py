@@ -10,6 +10,12 @@ PORT = 8090
 conn = pymysql.connect("localhost", "root", "mypassword", "localdata")
 
 class MyHttpRequestHandler(http.server.SimpleHTTPRequestHandler):
+    def write_response(self, jsons):
+        self.send_response(200)
+        self.send_header('Content-type', 'text/html')
+        self.end_headers()
+        self.wfile.write(bytes(json.dumps(jsons), 'utf-8'))
+
     def do_GET(self):
         self.path = 'index.html'
         content_length = int(self.headers['Content-Length'])
@@ -34,10 +40,13 @@ class MyHttpRequestHandler(http.server.SimpleHTTPRequestHandler):
        # cur.execute(sql)
        # rows = cur.fetchall()
        # print(len(rows))
-        self.send_response(200)
-        self.send_header('Content-type', 'text/html')
-        self.end_headers()
-        self.wfile.write(bytes(json.dumps(objs), 'utf-8'))
+        
+        # self.send_response(200)
+        # self.send_header('Content-type', 'text/html')
+        # self.end_headers()
+        # self.wfile.write(bytes(json.dumps(objs), 'utf-8'))
+        write_response(objs)
+        
         #return http.server.SimpleHTTPRequestHandler.do_GET(self)
 
     def do_POST(self):
@@ -46,16 +55,19 @@ class MyHttpRequestHandler(http.server.SimpleHTTPRequestHandler):
         cur = conn.cursor()
         obj = json.loads(post_data.decode())
         print(obj)
-        self.send_response(200)
-        self.send_header('Content-type', 'text/html')
-        self.end_headers()
+        
+        # self.send_response(200)
+        # self.send_header('Content-type', 'text/html')
+        # self.end_headers()
+        
         if obj["type"] == "add":
             topic = (obj["user_id"], obj["title"], obj["content"], obj["latitude"], obj["longitude"])
             cur.execute('insert into topic(user_id, title, content, lat, log) values(%s, %s, %s, %s, %s)', topic)
             conn.commit()
 
-            self.path = 'index.html'
-            self.wfile.write(bytes(json.dumps({'status':'ok'}), 'utf-8'))
+           # self.wfile.write(bytes(json.dumps({'status':'ok'}), 'utf-8'))
+            write_response({'status':'ok'})
+
 #        length = int(self.headers.getheader('content-length'))
 #        message = json.loads(self.rfile.read(length))
 #        message['status'] = 'ok'
@@ -86,7 +98,8 @@ class MyHttpRequestHandler(http.server.SimpleHTTPRequestHandler):
             for obj in tmp_objs:
                 obj2 = {"topicId": obj['topicId'], "title": obj['title'], "content":obj['content'], "latitude":obj['latitude'], "longitude":obj['longitude'], "replies": obj['replies']}
                 objs.append(obj2)
-            self.wfile.write(bytes(json.dumps({'topics':objs}), 'utf-8'))
+            #self.wfile.write(bytes(json.dumps({'topics':objs}), 'utf-8'))
+            write_response({'topics':objs})
         elif obj["type"] == "fun":
             latitude = obj["latitude"]
             longitude = obj["longitude"]
@@ -97,14 +110,16 @@ class MyHttpRequestHandler(http.server.SimpleHTTPRequestHandler):
             for row in rows:
                 obj2 = {"name": row[1], "description": row[2], "latitude":row[3], "longitude":row[4]}
                 objs.append(obj2)
-            self.wfile.write(bytes(json.dumps({'funs':objs}), 'utf-8'))
+            #self.wfile.write(bytes(json.dumps({'funs':objs}), 'utf-8'))
+            write_response({'funs':objs})
         elif obj["type"] == "reply":
             topic_id = obj["topic_id"]
             reply = obj["content"]
             cur.execute('insert into reply(topic_id, content) values(%s, %s)', (topic_id, reply))
             conn.commit()
-            self.path = 'index.html'
-            self.wfile.write(bytes(json.dumps({'status':'ok'}), 'utf-8'))
+            #self.path = 'index.html'
+            #self.wfile.write(bytes(json.dumps({'status':'ok'}), 'utf-8'))
+            write_response({'status':'ok'})
         elif obj["type"] == "topic":
             topic_id = obj["topic_id"]
             cur.execute('select * from topic where topic_id = %s', topic_id)
@@ -116,7 +131,8 @@ class MyHttpRequestHandler(http.server.SimpleHTTPRequestHandler):
             for r in results:
                 replies.append(r[3])
             obj2 = {"topicId": topic[0], "title": topic[2], "content":topic[3], "latitude":topic[4], "longitude":topic[5], "replies": replies}
-            self.wfile.write(bytes(json.dumps(obj2), 'utf-8'))
+            #self.wfile.write(bytes(json.dumps(obj2), 'utf-8'))
+            write_response(obj2)
         else:
             print("not implemented")
 
