@@ -24,37 +24,31 @@ class MyHttpRequestHandler(http.server.SimpleHTTPRequestHandler):
         print(obj)
         latitude = obj["latitude"]
         longitude = obj["longitude"]
+        
         cur = conn.cursor()
-        #cur.execute('')
         sql = """SELECT * FROM `topic`"""
         cur.execute(sql)
         rows = cur.fetchall()
+        
         objs=[]
         for row in rows:
             obj = {"title": row[2], "content":row[3], "latitude":row[4], "longitude":row[5]}
             objs.append(obj)
-       # topic = (123, "hello", "world", 37.0, -122.0)
-       # cur.execute('insert into topic(user_id, title, content, lat, log) values(%s, %s, %s, %s, %s)', topic)
-       # conn.commit()
-       # sql = """SELECT * FROM `topic`"""
-       # cur.execute(sql)
-       # rows = cur.fetchall()
-       # print(len(rows))
         
         # self.send_response(200)
         # self.send_header('Content-type', 'text/html')
         # self.end_headers()
         # self.wfile.write(bytes(json.dumps(objs), 'utf-8'))
-        write_response(objs)
+        self.write_response(objs)
         
         #return http.server.SimpleHTTPRequestHandler.do_GET(self)
 
     def do_POST(self):
         content_length = int(self.headers['Content-Length'])
         post_data = self.rfile.read(content_length)
-        cur = conn.cursor()
         obj = json.loads(post_data.decode())
         print(obj)
+        cur = conn.cursor()
         
         # self.send_response(200)
         # self.send_header('Content-type', 'text/html')
@@ -66,17 +60,12 @@ class MyHttpRequestHandler(http.server.SimpleHTTPRequestHandler):
             conn.commit()
 
            # self.wfile.write(bytes(json.dumps({'status':'ok'}), 'utf-8'))
-            write_response({'status':'ok'})
-
-#        length = int(self.headers.getheader('content-length'))
-#        message = json.loads(self.rfile.read(length))
-#        message['status'] = 'ok'
+            self.write_response({'status':'ok'})
 
         elif obj["type"] == "get":
             latitude = obj["latitude"]
             longitude = obj["longitude"]
             keyword = obj["keyword"]
-        #cur.execute('')
             if keyword:
                 sql = """SELECT *, ((ACOS(SIN(%s * PI() / 180) * SIN(lat * PI() / 180) + COS(%s * PI() / 180) * COS(lat * PI() / 180) * COS((%s - log) * PI() / 180)) * 180 / PI()) * 60 * 1.1515 * 1.609344) as distance FROM topic HAVING distance <= 3 and (title like concat('%%', %s, '%%') or content like concat('%%', %s, '%%')) ORDER BY distance limit 50"""
                 cur.execute(sql, (latitude, latitude, longitude, keyword, keyword))
@@ -99,7 +88,7 @@ class MyHttpRequestHandler(http.server.SimpleHTTPRequestHandler):
                 obj2 = {"topicId": obj['topicId'], "title": obj['title'], "content":obj['content'], "latitude":obj['latitude'], "longitude":obj['longitude'], "replies": obj['replies']}
                 objs.append(obj2)
             #self.wfile.write(bytes(json.dumps({'topics':objs}), 'utf-8'))
-            write_response({'topics':objs})
+            self.write_response({'topics':objs})
         elif obj["type"] == "fun":
             latitude = obj["latitude"]
             longitude = obj["longitude"]
@@ -111,7 +100,7 @@ class MyHttpRequestHandler(http.server.SimpleHTTPRequestHandler):
                 obj2 = {"name": row[1], "description": row[2], "latitude":row[3], "longitude":row[4]}
                 objs.append(obj2)
             #self.wfile.write(bytes(json.dumps({'funs':objs}), 'utf-8'))
-            write_response({'funs':objs})
+            self.write_response({'funs':objs})
         elif obj["type"] == "reply":
             topic_id = obj["topic_id"]
             reply = obj["content"]
@@ -119,7 +108,7 @@ class MyHttpRequestHandler(http.server.SimpleHTTPRequestHandler):
             conn.commit()
             #self.path = 'index.html'
             #self.wfile.write(bytes(json.dumps({'status':'ok'}), 'utf-8'))
-            write_response({'status':'ok'})
+            self.write_response({'status':'ok'})
         elif obj["type"] == "topic":
             topic_id = obj["topic_id"]
             cur.execute('select * from topic where topic_id = %s', topic_id)
@@ -132,7 +121,7 @@ class MyHttpRequestHandler(http.server.SimpleHTTPRequestHandler):
                 replies.append(r[3])
             obj2 = {"topicId": topic[0], "title": topic[2], "content":topic[3], "latitude":topic[4], "longitude":topic[5], "replies": replies}
             #self.wfile.write(bytes(json.dumps(obj2), 'utf-8'))
-            write_response(obj2)
+            self.write_response(obj2)
         else:
             print("not implemented")
 
